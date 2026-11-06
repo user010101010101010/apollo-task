@@ -1,0 +1,12 @@
+{
+  "name": "apollo-task",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apollo Task — рабочее пространство небольшой команды",
+  "scripts": {
+    "check": "node --check dist/app.js && node --check dist/data.js && node --check dist/icons.js && node --test tests/domain.test.js",
+    "build": "node scripts/build.mjs",
+    "start": "python3 -m http.server 3000 --directory dist"
+  }
+}
