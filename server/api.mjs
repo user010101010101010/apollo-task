@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {seed} from '../public/data.js';
+import {agencyWorkspace} from '../public/agency-data.js';
 import {str,person,validateWorkspace} from './schema.mjs';
 const now=()=>new Date().toISOString(),id=()=>crypto.randomUUID();
 const response=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
@@ -12,26 +12,29 @@ async function membership(db,wid,userId){const row=await db.prepare('SELECT * FR
 async function load(db,wid){const row=await db.prepare('SELECT * FROM workspaces WHERE id=?').bind(wid).first();if(!row)throw fail('Пространство не найдено',404);return {...row,state:JSON.parse(row.state)};}
 async function roster(db,wid){return (await db.prepare('SELECT user_id,name,email,role,joined FROM members WHERE workspace_id=? ORDER BY joined').bind(wid).all()).results;}
 async function userWorkspaces(db,userId){return (await db.prepare('SELECT w.id,w.name,m.role FROM workspaces w JOIN members m ON m.workspace_id=w.id WHERE m.user_id=? ORDER BY w.created').bind(userId).all()).results;}
-export function initialState(user,name){const s=seed(),old='roman';s.workspace=name;s.people=s.people.map(p=>p.id===old?{...p,id:user.userId,name:user.displayName||user.email,email:user.email}:p);s.pages.forEach(p=>{if(p.owner===old)p.owner=user.userId;p.kind='page';});s.tasks.forEach(t=>{if(t.assignee===old)t.assignee=user.userId;});s.activity.forEach(a=>{if(a.person===old)a.person=user.userId;});s.boards=[];s.databases=[];s.folders=[];s.links=[];delete s.favorites;delete s.dismissedWelcome;delete s.notificationsRead;return validateWorkspace(s);}
-async function createWorkspace(db,user,name){const wid=id(),s=initialState(user,name);await db.batch([db.prepare('INSERT INTO workspaces(id,name,state,revision,created,updated) VALUES(?,?,?,1,?,?)').bind(wid,name,JSON.stringify(s),now(),now()),db.prepare('INSERT INTO members(workspace_id,user_id,name,email,role,joined) VALUES(?,?,?,?,?,?)').bind(wid,user.userId,user.displayName||user.email,user.email,'owner',now())]);return wid;}
+export function initialState(user,name){return validateWorkspace(agencyWorkspace({id:user.userId,name:user.displayName||user.email,email:user.email,agency:name,role:'Руководитель агентства'}));}
+async function createWorkspace(db,user,name,role){const wid=id(),s=role?validateWorkspace(agencyWorkspace({id:user.userId,name:user.displayName||user.email,email:user.email,agency:name,role})):initialState(user,name);delete s.favorites;delete s.dismissedWelcome;delete s.notificationsRead;await db.batch([db.prepare('INSERT INTO workspaces(id,name,state,revision,created,updated) VALUES(?,?,?,1,?,?)').bind(wid,name,JSON.stringify(s),now(),now()),db.prepare('INSERT INTO members(workspace_id,user_id,name,email,role,joined) VALUES(?,?,?,?,?,?)').bind(wid,user.userId,user.displayName||user.email,user.email,'owner',now())]);return wid;}
 export async function handleAPI(request,env,user){try{
-  if(new URL(request.url).pathname==='/api/health'&&request.method==='GET'){if(!env.DB)return response({ok:false,database:false},503);await env.DB.prepare('SELECT 1 AS ok').first();return response({ok:true,database:true,files:Boolean(env.BUCKET),version:'0.2.0'});}
+  if(new URL(request.url).pathname==='/api/health'&&request.method==='GET'){if(!env.DB)return response({ok:false,database:false},503);await env.DB.prepare('SELECT 1 AS ok').first();return response({ok:true,database:true,files:Boolean(env.BUCKET),version:'0.3.0'});}
   if(!user)return response({error:'Войдите через ChatGPT, чтобы открыть рабочее пространство',code:'SIGN_IN_REQUIRED'},401);
   if(!env.DB)return response({error:'База данных временно недоступна'},503);
   const url=new URL(request.url),path=url.pathname.replace(/^\/api\//,''),method=request.method,db=env.DB;
   if(!['GET','HEAD'].includes(method)){const origin=request.headers.get('origin');if(origin&&origin!==url.origin)throw fail('Запрос с другого сайта запрещён',403);}
+  if(path==='session'&&method==='GET')return response({user:{id:user.userId,name:user.displayName||user.email,email:user.email},workspaces:await userWorkspaces(db,user.userId)});
+  if(path==='register'&&method==='POST'){const d=await body(request),name=str(100).min(1).parse(d.name?.trim()),agency=str(80).min(1).parse(d.agency?.trim()),role=str(120).min(1).parse(d.role?.trim());const existing=await userWorkspaces(db,user.userId);if(existing.some(w=>w.name===agency&&w.role==='owner'))return response({workspaceId:existing.find(w=>w.name===agency&&w.role==='owner').id});return response({workspaceId:await createWorkspace(db,{...user,displayName:name},agency,role)},201);}
   if(path==='bootstrap'&&method==='GET'){
     let list=await userWorkspaces(db,user.userId),wid=url.searchParams.get('workspace')||list[0]?.id;
     if(!wid){wid=await createWorkspace(db,user,'Apollo Studio');list=await userWorkspaces(db,user.userId);}
     const member=await membership(db,wid,user.userId),data=await load(db,wid),prefs=await db.prepare('SELECT json FROM preferences WHERE workspace_id=? AND user_id=?').bind(wid,user.userId).first();
     return response({user:{id:user.userId,name:member.name,email:member.email,role:member.role},workspaceId:wid,revision:data.revision,state:data.state,preferences:prefs?JSON.parse(prefs.json):{},workspaces:list,members:await roster(db,wid)});
   }
-  if(path==='workspace'&&method==='POST'){const data=await body(request),name=str(80).min(1).parse(data.name?.trim());return response({workspaceId:await createWorkspace(db,user,name)},201);}
+  if(path==='workspace'&&method==='POST'){const data=await body(request),name=str(80).min(1).parse(data.name?.trim());return response({workspaceId:await createWorkspace(db,user,name,'Руководитель агентства')},201);}
   if(path==='workspace'&&method==='PUT'){
     const data=await body(request),wid=person.parse(data.workspaceId),member=await membership(db,wid,user.userId);requireEditor(member);
     let parsed;try{parsed=validateWorkspace(data.state);}catch{throw fail('Некорректная структура данных пространства',400);}const old=await load(db,wid);if(old.revision!==data.revision)return response({error:'Пространство изменено другим участником. Обновите данные перед сохранением.',code:'CONFLICT',revision:old.revision,state:old.state},409);
     if(member.role!=='owner'&&parsed.workspace!==old.name)throw fail('Только владелец может менять название пространства',403);
     for(const m of await roster(db,wid))if(!parsed.people.some(p=>p.id===m.user_id))throw fail('Нельзя удалить карточку участника с действующим доступом',400);
+    validateReviews(old.state,parsed,user.userId,await roster(db,wid));
     const result=await db.prepare('UPDATE workspaces SET name=?,state=?,revision=revision+1,updated=? WHERE id=? AND revision=?').bind(parsed.workspace,JSON.stringify(parsed),now(),wid,data.revision).run();
     if(!result.meta.changes)return response({error:'Данные изменились. Перезагрузите пространство.',code:'CONFLICT'},409);return response({revision:data.revision+1});
   }
@@ -51,3 +54,10 @@ export async function handleAPI(request,env,user){try{
   if(path==='attachments'&&method==='DELETE'){const d=await body(request),row=await db.prepare('SELECT * FROM attachments WHERE id=?').bind(d.id).first();if(!row)throw fail('Файл не найден',404);requireEditor(await membership(db,row.workspace_id,user.userId));await env.BUCKET?.delete(`${row.workspace_id}/${row.id}`);await db.prepare('DELETE FROM attachments WHERE id=?').bind(row.id).run();return response({ok:true});}
   return response({error:'Неизвестный маршрут'},404);
 }catch(err){if(err instanceof z.ZodError)return response({error:'Проверьте заполнение полей'},400);return response({error:err.status?err.message:'Не удалось выполнить запрос. Попробуйте ещё раз.'},err.status||500);}}
+
+export function validateReviews(old,s,userId,members){
+ const validMember=id=>members.some(m=>m.user_id===id&&m.role!=='viewer');
+ for(const r of s.reviews){const previous=(old.reviews||[]).find(x=>x.id===r.id),p=s.pages.find(p=>p.id===r.page);if(!previous){if(r.requestedBy!==userId||r.decision!=='pending'||!validMember(r.reviewer)||r.pageUpdated!==p.updated)throw fail('Проверьте получателя и версию согласования',400);}else if(JSON.stringify(previous)!==JSON.stringify(r)){if(r.page!==previous.page||r.reviewer!==previous.reviewer||r.requestedBy!==previous.requestedBy||r.pageUpdated!==previous.pageUpdated||r.project!==previous.project||r.created!==previous.created)throw fail('Нельзя менять данные существующего согласования',403);if(previous.decision!=='pending'||r.reviewer!==userId||!validMember(userId))throw fail('Решение принимает назначенный проверяющий',403);if(r.pageUpdated!==p.updated)throw fail('Материал изменился. Запросите новое согласование',409);if(r.decision==='changes'&&!r.comment.trim())throw fail('Опишите необходимые правки',400);}}
+ for(const r of old.reviews||[])if(!s.reviews.some(x=>x.id===r.id)&&s.pages.some(p=>p.id===r.page))throw fail('История согласований сохраняется',400);
+ for(const p of s.projects)if(p.stage==='done'&&(old.projects||[]).find(x=>x.id===p.id)?.stage!=='done'){const tasks=s.tasks.filter(t=>t.project===p.id),reviews=s.reviews.filter((r,i,a)=>r.project===p.id&&!a.slice(i+1).some(x=>x.page===r.page));if(tasks.some(t=>t.status!=='done')||reviews.some(r=>r.decision!=='approved'||r.pageUpdated!==s.pages.find(x=>x.id===r.page)?.updated))throw fail('Сначала закройте задачи и согласования проекта',400);}
+}
