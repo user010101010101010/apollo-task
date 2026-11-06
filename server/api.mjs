@@ -12,10 +12,10 @@ async function membership(db,wid,userId){const row=await db.prepare('SELECT * FR
 async function load(db,wid){const row=await db.prepare('SELECT * FROM workspaces WHERE id=?').bind(wid).first();if(!row)throw fail('Пространство не найдено',404);return {...row,state:JSON.parse(row.state)};}
 async function roster(db,wid){return (await db.prepare('SELECT user_id,name,email,role,joined FROM members WHERE workspace_id=? ORDER BY joined').bind(wid).all()).results;}
 async function userWorkspaces(db,userId){return (await db.prepare('SELECT w.id,w.name,m.role FROM workspaces w JOIN members m ON m.workspace_id=w.id WHERE m.user_id=? ORDER BY w.created').bind(userId).all()).results;}
-export function initialState(user,name){return validateWorkspace(agencyWorkspace({id:user.userId,name:user.displayName||user.email,email:user.email,agency:name,role:'Руководитель агентства'}));}
+export function initialState(user,name){return validateWorkspace(agencyWorkspace({id:user.userId,name:user.displayName||user.email,email:user.email,agency:name,role:'Администратор компании'}));}
 async function createWorkspace(db,user,name,role){const wid=id(),s=role?validateWorkspace(agencyWorkspace({id:user.userId,name:user.displayName||user.email,email:user.email,agency:name,role})):initialState(user,name);delete s.favorites;delete s.dismissedWelcome;delete s.notificationsRead;await db.batch([db.prepare('INSERT INTO workspaces(id,name,state,revision,created,updated) VALUES(?,?,?,1,?,?)').bind(wid,name,JSON.stringify(s),now(),now()),db.prepare('INSERT INTO members(workspace_id,user_id,name,email,role,joined) VALUES(?,?,?,?,?,?)').bind(wid,user.userId,user.displayName||user.email,user.email,'owner',now())]);return wid;}
 export async function handleAPI(request,env,user){try{
-  if(new URL(request.url).pathname==='/api/health'&&request.method==='GET'){if(!env.DB)return response({ok:false,database:false},503);await env.DB.prepare('SELECT 1 AS ok').first();return response({ok:true,database:true,files:Boolean(env.BUCKET),version:'0.3.0'});}
+  if(new URL(request.url).pathname==='/api/health'&&request.method==='GET'){if(!env.DB)return response({ok:false,database:false},503);await env.DB.prepare('SELECT 1 AS ok').first();return response({ok:true,database:true,files:Boolean(env.BUCKET),version:'0.4.0'});}
   if(!user)return response({error:'Войдите через ChatGPT, чтобы открыть рабочее пространство',code:'SIGN_IN_REQUIRED'},401);
   if(!env.DB)return response({error:'База данных временно недоступна'},503);
   const url=new URL(request.url),path=url.pathname.replace(/^\/api\//,''),method=request.method,db=env.DB;
@@ -24,11 +24,11 @@ export async function handleAPI(request,env,user){try{
   if(path==='register'&&method==='POST'){const d=await body(request),name=str(100).min(1).parse(d.name?.trim()),agency=str(80).min(1).parse(d.agency?.trim()),role=str(120).min(1).parse(d.role?.trim());const existing=await userWorkspaces(db,user.userId);if(existing.some(w=>w.name===agency&&w.role==='owner'))return response({workspaceId:existing.find(w=>w.name===agency&&w.role==='owner').id});return response({workspaceId:await createWorkspace(db,{...user,displayName:name},agency,role)},201);}
   if(path==='bootstrap'&&method==='GET'){
     let list=await userWorkspaces(db,user.userId),wid=url.searchParams.get('workspace')||list[0]?.id;
-    if(!wid){wid=await createWorkspace(db,user,'Apollo Studio');list=await userWorkspaces(db,user.userId);}
+    if(!wid){wid=await createWorkspace(db,user,'Моя компания');list=await userWorkspaces(db,user.userId);}
     const member=await membership(db,wid,user.userId),data=await load(db,wid),prefs=await db.prepare('SELECT json FROM preferences WHERE workspace_id=? AND user_id=?').bind(wid,user.userId).first();
     return response({user:{id:user.userId,name:member.name,email:member.email,role:member.role},workspaceId:wid,revision:data.revision,state:data.state,preferences:prefs?JSON.parse(prefs.json):{},workspaces:list,members:await roster(db,wid)});
   }
-  if(path==='workspace'&&method==='POST'){const data=await body(request),name=str(80).min(1).parse(data.name?.trim());return response({workspaceId:await createWorkspace(db,user,name,'Руководитель агентства')},201);}
+  if(path==='workspace'&&method==='POST'){const data=await body(request),name=str(80).min(1).parse(data.name?.trim());return response({workspaceId:await createWorkspace(db,user,name,'Администратор компании')},201);}
   if(path==='workspace'&&method==='PUT'){
     const data=await body(request),wid=person.parse(data.workspaceId),member=await membership(db,wid,user.userId);requireEditor(member);
     let parsed;try{parsed=validateWorkspace(data.state);}catch{throw fail('Некорректная структура данных пространства',400);}const old=await load(db,wid);if(old.revision!==data.revision)return response({error:'Пространство изменено другим участником. Обновите данные перед сохранением.',code:'CONFLICT',revision:old.revision,state:old.state},409);
