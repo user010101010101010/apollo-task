@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {seed,validateState,searchRecords,transitionTask,escapeHTML,isOverdue,localDay} from '../dist/data.js';
+import {seed,validateState,searchRecords,transitionTask,escapeHTML,isOverdue,localDay} from '../public/data.js';
 
 test('initial workspace remains valid after JSON export and import',()=>{
   const state=JSON.parse(JSON.stringify(seed()));

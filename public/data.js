@@ -1,5 +1,6 @@
 export const STORAGE_KEY = 'apollo-task.v1';
-export const ME = 'roman';
+export let ME = 'roman';
+export function setCurrentUser(id){ME=id;}
 export function escapeHTML(value) { return String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 export function uid(prefix='id') { return `${prefix}-${globalThis.crypto?.randomUUID?.() || Date.now().toString(36)+Math.random().toString(36).slice(2)}`; }
 export function localDay(offset=0) {const d=new Date();d.setDate(d.getDate()+offset);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
