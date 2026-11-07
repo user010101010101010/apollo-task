@@ -24,17 +24,6 @@ export async function handleRequest(request,env,nativeUser){try{
  if(!env.DB)return json({error:'База данных временно недоступна'},503);const db=env.DB;
  const formLogin=path==='auth/login'&&method==='POST'&&!request.headers.get('content-type')?.includes('application/json');
  if(!['GET','HEAD'].includes(method)){const origin=request.headers.get('origin'),gateway=env.APOLLO_GATEWAY_ORIGIN;if(origin&&origin!==url.origin&&!(formLogin&&gateway&&origin===gateway))throw fail('Запрос с другого сайта запрещён',403);}
- // Temporary, separately authorized provisioning. Disabled when the runtime secret is absent.
- if(path==='internal/provision'&&method==='POST'){
-  const token=env.APOLLO_PROVISION_TOKEN;if(!token)return json({error:'Не найдено'},404);
-  if(!equal(await digest(request.headers.get('authorization')||''),await digest('Bearer '+token)))throw fail('Нет доступа',403);
-  const d=await read(request),op=z.string().uuid().parse(d.operationId),id='apollo-'+op,login=loginValue.parse(d.login),password=passwordValue.parse(d.password);
-  const prior=await db.prepare('SELECT id,login FROM login_accounts WHERE id=?').bind(id).first();if(prior){if(prior.login!==login)throw fail('Операция уже использована',409);return json({ok:true,id,login,existing:true});}
-  if(await db.prepare('SELECT id FROM login_accounts WHERE login=?').bind(login).first())throw fail('Логин занят',409);
-  const salt=random(),wid=crypto.randomUUID(),name=z.string().min(1).max(100).parse(d.name),title=z.string().min(1).max(80).parse(d.workspace),state=initialState({userId:id,displayName:name,email:''},title);
-  await db.batch([db.prepare('INSERT INTO login_accounts(id,login,password_hash,salt,name,email,is_operator,disabled,must_change,created) VALUES(?,?,?,?,?,?,1,0,0,?)').bind(id,login,await passwordHash(password,salt),salt,name,'',iso()),db.prepare('INSERT INTO workspaces(id,name,state,revision,created,updated) VALUES(?,?,?,1,?,?)').bind(wid,title,JSON.stringify(state),iso(),iso()),db.prepare('INSERT INTO members(workspace_id,user_id,name,email,role,joined) VALUES(?,?,?,?,?,?)').bind(wid,id,name,'','owner',iso())]);
-  return json({ok:true,id,login,workspaceId:wid},201);
- }
  const account=await session(request,db);
  if(path==='auth/status'&&method==='GET'){const setup=setupAllowed(nativeUser,env)&&!(await db.prepare('SELECT id FROM login_accounts WHERE is_operator=1 LIMIT 1').first());return json({authenticated:Boolean(account),account:account?clean(account):null,setupAvailable:setup,recoveryAvailable:setupAllowed(nativeUser,env)&&!setup});}
  if(path==='auth/setup'&&method==='POST'){
