@@ -24,13 +24,14 @@ export async function handleRequest(request,env,nativeUser){try{
  if(!env.DB)return json({error:'База данных временно недоступна'},503);const db=env.DB;
  const formLogin=path==='auth/login'&&method==='POST'&&!request.headers.get('content-type')?.includes('application/json');
  if(!['GET','HEAD'].includes(method)){const origin=request.headers.get('origin'),gateway=env.APOLLO_GATEWAY_ORIGIN;if(origin&&origin!==url.origin&&!(formLogin&&gateway&&origin===gateway))throw fail('Запрос с другого сайта запрещён',403);}
+ if(['auth/companies','auth/reset-company'].includes(path))return json({error:'Подключение других компаний недоступно'},403);
  const account=await session(request,db);
  if(path==='auth/status'&&method==='GET'){const setup=setupAllowed(nativeUser,env)&&!(await db.prepare('SELECT id FROM login_accounts WHERE is_operator=1 LIMIT 1').first());return json({authenticated:Boolean(account),account:account?clean(account):null,setupAvailable:setup,recoveryAvailable:setupAllowed(nativeUser,env)&&!setup});}
  if(path==='auth/setup'&&method==='POST'){
   if(!setupAllowed(nativeUser,env))throw fail('Первичная настройка доступна только владельцу Apollo',403);if(await db.prepare('SELECT id FROM login_accounts WHERE is_operator=1 LIMIT 1').first())throw fail('Учётная запись Apollo уже настроена',409);
   const d=await read(request),login=loginValue.parse(d.login),password=passwordValue.parse(d.password),salt=random(),id=nativeUser.userId;
   await db.prepare('INSERT INTO login_accounts(id,login,password_hash,salt,name,email,is_operator,disabled,must_change,created) VALUES(?,?,?,?,?,?,1,0,0,?)').bind(id,login,await passwordHash(password,salt),salt,nativeUser.displayName||'Администратор Apollo',nativeUser.email,iso()).run();
-  if(!(await db.prepare('SELECT workspace_id FROM members WHERE user_id=? LIMIT 1').bind(id).first()))await handleAPI(new Request(url.origin+'/api/workspace',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Apollo — управление клиентами'})}),env,nativeUser);
+  if(!(await db.prepare('SELECT workspace_id FROM members WHERE user_id=? LIMIT 1').bind(id).first()))await handleAPI(new Request(url.origin+'/api/workspace',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Моя компания'})}),env,nativeUser);
   const a=await db.prepare('SELECT * FROM login_accounts WHERE id=?').bind(id).first();return json({ok:true,account:clean(a)},201,{'Set-Cookie':cookie(await issue(db,a))});
  }
  if(path==='auth/recover'&&method==='POST'){
@@ -49,18 +50,14 @@ export async function handleRequest(request,env,nativeUser){try{
  }
  if(account.must_change)throw fail('Сначала замените временный пароль',428);
  if(path==='auth/accounts'&&method==='GET'){const wid=url.searchParams.get('workspace');await owner(db,wid,account);const rows=(await db.prepare('SELECT a.id,a.login,a.name,a.email,a.must_change,m.role FROM login_accounts a JOIN members m ON m.user_id=a.id WHERE m.workspace_id=? AND a.disabled=0 ORDER BY m.joined').bind(wid).all()).results;return json({accounts:rows});}
- if(path==='auth/companies'&&method==='GET'){if(!account.is_operator)throw fail('Доступно администратору Apollo',403);return json({companies:(await db.prepare("SELECT w.id,w.name,w.created,m.name AS admin,a.login FROM workspaces w JOIN members m ON m.workspace_id=w.id AND m.role='owner' JOIN login_accounts a ON a.id=m.user_id WHERE a.is_operator=0 ORDER BY w.created DESC").all()).results});}
- if((path==='auth/accounts'||path==='auth/companies')&&method==='POST'){
-  const d=await read(request),company=path==='auth/companies';if(company&&!account.is_operator)throw fail('Создать компанию может администратор Apollo',403);if(!company)await owner(db,d.workspaceId,account);
-  const login=loginValue.parse(d.login),name=z.string().trim().min(1).max(100).parse(d.name),email=d.email?z.string().email().max(150).parse(d.email):'',role=company?'owner':z.enum(['editor','viewer']).parse(d.role),job=z.string().max(120).parse(d.job||'Сотрудник');
+ if(path==='auth/accounts'&&method==='POST'){
+  const d=await read(request);await owner(db,d.workspaceId,account);
+  const login=loginValue.parse(d.login),name=z.string().trim().min(1).max(100).parse(d.name),email=d.email?z.string().email().max(150).parse(d.email):'',role=z.enum(['editor','viewer']).parse(d.role),job=z.string().max(120).parse(d.job||'Сотрудник');
   if(await db.prepare('SELECT id FROM login_accounts WHERE login=?').bind(login).first())throw fail('Этот логин уже занят',409);
   const department=z.string().max(100).parse(d.department||''),responsibility=z.string().max(3000).parse(d.responsibility||'');
-  const id=crypto.randomUUID(),password='Ap!'+random().slice(0,21),salt=random(),wid=company?crypto.randomUUID():d.workspaceId,queries=[db.prepare('INSERT INTO login_accounts(id,login,password_hash,salt,name,email,is_operator,disabled,must_change,created) VALUES(?,?,?,?,?,?,0,0,1,?)').bind(id,login,await passwordHash(password,salt),salt,name,email,iso())];
-  if(company){const title=z.string().trim().min(1).max(80).parse(d.company),s=initialState({userId:id,displayName:name,email},title);queries.push(db.prepare('INSERT INTO workspaces(id,name,state,revision,created,updated) VALUES(?,?,?,1,?,?)').bind(wid,title,JSON.stringify(s),iso(),iso()));}
-  queries.push(db.prepare('INSERT INTO members(workspace_id,user_id,name,email,role,joined) VALUES(?,?,?,?,?,?)').bind(wid,id,name,email,role,iso()));await db.batch(queries);if(!company)await appendPerson(db,wid,{id,name,email},job,department,responsibility);return json({workspaceId:wid,id,login,password,name,url:url.origin},201);
- }
- if(path==='auth/reset-company'&&method==='POST'){
-  if(!account.is_operator)throw fail('Доступно администратору Apollo',403);const d=await read(request),target=await db.prepare("SELECT a.* FROM login_accounts a JOIN members m ON m.user_id=a.id WHERE m.workspace_id=? AND m.role='owner' AND a.is_operator=0").bind(d.workspaceId).first();if(!target)throw fail('Администратор компании не найден',404);const password='Ap!'+random().slice(0,21),salt=random();await db.batch([db.prepare('UPDATE login_accounts SET password_hash=?,salt=?,must_change=1 WHERE id=?').bind(await passwordHash(password,salt),salt,target.id),db.prepare('DELETE FROM login_sessions WHERE account_id=?').bind(target.id)]);return json({login:target.login,password,name:target.name,url:url.origin});
+  const id=crypto.randomUUID(),password='Ap!'+random().slice(0,21),salt=random(),wid=d.workspaceId,queries=[db.prepare('INSERT INTO login_accounts(id,login,password_hash,salt,name,email,is_operator,disabled,must_change,created) VALUES(?,?,?,?,?,?,0,0,1,?)').bind(id,login,await passwordHash(password,salt),salt,name,email,iso())];
+
+  queries.push(db.prepare('INSERT INTO members(workspace_id,user_id,name,email,role,joined) VALUES(?,?,?,?,?,?)').bind(wid,id,name,email,role,iso()));await db.batch(queries);await appendPerson(db,wid,{id,name,email},job,department,responsibility);return json({workspaceId:wid,id,login,password,name,url:url.origin},201);
  }
  if(path==='auth/reset'&&method==='POST'){
   const d=await read(request);await owner(db,d.workspaceId,account);const target=await db.prepare('SELECT a.*,m.role FROM login_accounts a JOIN members m ON m.user_id=a.id WHERE m.workspace_id=? AND a.id=?').bind(d.workspaceId,d.userId).first();if(!target||target.id===account.id||target.is_operator||target.role==='owner')throw fail('Этот пароль меняет сам владелец учётной записи',403);const password='Ap!'+random().slice(0,21),salt=random();await db.batch([db.prepare('UPDATE login_accounts SET password_hash=?,salt=?,must_change=1 WHERE id=?').bind(await passwordHash(password,salt),salt,target.id),db.prepare('DELETE FROM login_sessions WHERE account_id=?').bind(target.id)]);return json({login:target.login,password,name:target.name,url:url.origin});

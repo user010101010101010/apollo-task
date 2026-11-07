@@ -1,4 +1,12 @@
 const paths = {
+  phone:'<path d="M6 3H3c0 10 8 18 18 18v-3l-5-3-2 2-7-7 2-2z"/>',
+  logOut:'<path d="M9 5H4v14h5M13 8l4 4-4 4M8 12h13"/>',
+  camera:'<path d="m8 5 1.5-2h5L16 5h4v15H4V5z"/><circle cx="12" cy="12" r="4"/>',
+  grip:'<circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/>',
+  eyeOff:'<path d="m3 3 18 18M10 5c5-1 9 3 11 7-1 2-2 3-4 4M6 6c-2 1-4 4-5 6 3 6 9 9 15 5M10 10a3 3 0 0 0 4 4"/>',
+  expand:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>',
+  undo:'<path d="m8 3-5 5 5 5M3 8h11a7 7 0 0 1 0 14h-2"/>',
+
   home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
