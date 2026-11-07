@@ -3,6 +3,7 @@ const paths = {
   search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   chevron:'<path d="m9 5 7 7-7 7"/>',
+  up:'<path d="m6 15 6-6 6 6"/>',
   down:'<path d="m6 9 6 6 6-6"/>',
   arrow:'<path d="M5 12h14m-5-5 5 5-5 5"/>',
   arrowLeft:'<path d="M19 12H5m5-5-5 5 5 5"/>',
