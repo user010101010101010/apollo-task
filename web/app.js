@@ -1,3 +1,5 @@
+import {createFiles} from './files.js';
+import {attachmentId} from './file-model.js';
 import {createGlobalSearch} from './search.js';
 import {createPeopleSettings,mediaURL} from './people-settings.js';
 import {organizationRoles} from './agency-data.js';
@@ -53,7 +55,7 @@ function sanitize(html){
     if(['SCRIPT','STYLE','IFRAME','OBJECT','SVG','MATH','FORM','INPUT','BUTTON','IMG','LINK','META'].includes(el.tagName)){el.remove();continue;}
     if(!allowed.has(el.tagName)){el.replaceWith(...el.childNodes);continue;}
     const href=el.getAttribute('href');for(const a of [...el.attributes])el.removeAttribute(a.name);
-    if(el.tagName==='A'&&href&&/^(https?:\/\/|mailto:|#)/i.test(href)){el.setAttribute('href',href);el.setAttribute('rel','noopener noreferrer');}
+    if(el.tagName==='A'&&href&&(/^(https?:\/\/|mailto:|#)/i.test(href)||attachmentId(href))){el.setAttribute('href',href);el.setAttribute('rel','noopener noreferrer');}
   }
   return doc.body.innerHTML;
 }
@@ -73,6 +75,7 @@ function render(){
   agency.enhance();
   workspace.enhance();
   peopleSettings.enhance();
+  files.enhance();
   sidebar.mount();
   updateSync();
   if(cloud.user.role==='viewer'){for(const el of app.querySelectorAll('[data-action=\"create\"],[data-action=\"new-page\"],[data-action=\"new-task\"],[data-action=\"new-person\"],[data-action=\"new-space\"],[data-action=\"edit-page\"],[data-db-row],[data-db-column],[data-board-add],[data-board-connect],[data-delete-item],[data-move-item],[data-complete],[data-quick-create],[data-use-template],[data-agency="new-project"],[data-edit-project],[data-project-page],[data-project-task],[data-ext-action=\"create\"]')){el.disabled=true;el.title='Доступ только для просмотра';}}
@@ -168,7 +171,7 @@ function editPage(id){const p=page(id);if(!p)return;editing=true;const main=$('.
   $('#editor-link').onmousedown=ev=>ev.preventDefault();$('#editor-link').onclick=()=>{const href=prompt('Адрес ссылки (https://…)');if(href&&/^https?:\/\//i.test(href)){document.execCommand('createLink',false,href);}else if(href)toast('Укажите ссылку, начинающуюся с https:// или http://');};
   $('#page-editor').onpaste=ev=>{ev.preventDefault();const text=ev.clipboardData.getData('text/plain');document.execCommand('insertText',false,text);};
   $('#delete-page').onclick=()=>{if(!confirm('Удалить страницу? Связанные задачи сохранятся без ссылки на неё.'))return;if(state.projects.some(x=>x.brief===p.id)){toast('Бриф связан с проектом. Сохраните его или уберите проект в архив.');return;}state.reviews=state.reviews.filter(x=>x.page!==p.id);state.pages=state.pages.filter(x=>x.id!==p.id);state.pages.forEach(x=>x.relatedPages=(x.relatedPages||[]).filter(id=>id!==p.id));state.favorites=(state.favorites||[]).filter(x=>x!==p.id);state.tasks=state.tasks.map(t=>t.page===p.id?{...t,page:null}:t);state.activity=state.activity.map(a=>a.page===p.id?{...a,page:null}:a);save();editing=false;go('knowledge');render();toast('Страница удалена');};
-  workspace.enhanceEditor(p);$('#edit-title').focus();
+  workspace.enhanceEditor(p);files.enhanceEditor(p);$('#edit-title').focus();
 }
 function historyModal(id){const p=page(id);openModal('История страницы',`<p class="modal-description">${e(p.title)}. Текущая версия сохранена ${dateLabel(p.updated)}.</p>${p.versions.length?`<div class="version-list">${p.versions.map((v,i)=>`<div class="version-row"><span class="version-icon">${icon('history')}</span><div><strong>${e(v.title)}</strong><small>${dateLabel(v.at)} · ${new Date(v.at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</small></div><button class="btn secondary" data-version="${i}">Посмотреть</button></div>`).join('')}</div>`:empty('Пока одна версия','Предыдущие версии появятся после первого редактирования.')}`,'wide-modal');document.querySelectorAll('[data-version]').forEach(n=>n.onclick=()=>{const idx=+n.dataset.version,v=p.versions[idx];openModal('Предыдущая версия',`<p class="modal-description">${dateLabel(v.at)} · ${e(v.title)}</p><div class="document-body version-preview">${sanitize(v.content)}</div><div class="modal-footer"><button class="btn secondary" id="back-history">Назад</button><button class="btn primary" id="restore-version">Восстановить версию</button></div>`,'wide-modal');$('#back-history').onclick=()=>historyModal(id);$('#restore-version').onclick=()=>{const restored={...v};p.versions.unshift({title:p.title,content:p.content,at:p.updated,owner:p.owner});p.versions=p.versions.slice(0,30);p.title=restored.title;p.content=sanitize(restored.content);p.updated=new Date().toISOString();activity('восстановил версию страницы',p.id);save();closeModal();render();toast('Версия восстановлена');};});}
 function shareModal(id){const url=new URL(location.href);url.hash=`page/${id}`;openModal('Ссылка на страницу',`<p class="modal-description">Ссылка открывает страницу в текущем пространстве. Доступ к материалу есть только у сотрудников вашей компании.</p><label class="field">Адрес страницы<input id="share-url" readonly value="${e(url.href)}"></label><div class="modal-footer"><button class="btn primary" id="copy-link">${icon('link')}Скопировать ссылку</button></div>`);$('#copy-link').onclick=async()=>{try{await navigator.clipboard.writeText(url.href);toast('Ссылка скопирована');closeModal();}catch{$('#share-url').select();toast('Выделили ссылку — скопируйте её вручную.');}};}
@@ -183,6 +186,7 @@ const ext=createExtension({getState:()=>state,getRoute:()=>route,getUser:()=>clo
 const agency=createAgency({app,getState:()=>state,getRoute:()=>route,getMembers:()=>cloud.members,getUser:()=>cloud.user,getWorkspaceId:()=>cloud.workspaceId,refresh:()=>refreshCloud(true),isViewer:()=>cloud.user.role==='viewer',navItem,heading,empty,avatar,taskListRow,openModal,closeModal,toast,go,render,save,api,boot,taskModal,newProjectPage(p){ext.newPage('page','sales-production',p.space);const f=$('#new-page-form');if(f?.parent)f.parent.value=p.folder;const old=f.onsubmit;f.onsubmit=ev=>{const ids=new Set(state.pages.map(x=>x.id));old(ev);const added=state.pages.find(x=>!ids.has(x.id));if(added){added.project=p.id;added.parent=p.folder;save();}};}});
 const workspace=createWorkspace({getState:()=>state,getRoute:()=>route,getUser:()=>cloud.user,isViewer:()=>cloud.user.role==='viewer',heading,empty,go,render,save,openModal,closeModal,toast,taskModal,newPage:()=>ext.newPage(),newProject:()=>agency.newProject(),persist:persistPreferences});
 const peopleSettings=createPeopleSettings({getState:()=>state,getRoute:()=>route,getUser:()=>cloud.user,getAccount:()=>cloud.account,getWorkspaceId:()=>cloud.workspaceId,getMembers:()=>cloud.members,heading,empty,avatar,taskListRow,openModal,closeModal,toast,go,render,api,beforeMutation,refresh:()=>refreshCloud(true)});
+const files=createFiles({getState:()=>state,getRoute:()=>route,getWorkspaceId:()=>cloud.workspaceId,isViewer:()=>cloud.user.role==='viewer',api,save,go,render,openModal,closeModal,toast,editPage,beforeMutation,refresh:()=>refreshCloud(true)});
 const globalSearch=createGlobalSearch({getState:()=>state,getTemplates:()=>ext.allTemplates,isGated:()=>cloud.preview||agency.gate(),openModal,closeModal,go,taskModal,personModal,persist:persistPreferences});
 const sidebar=createSidebar({getState:()=>state,getUser:()=>cloud.user,getWorkspaceId:()=>cloud.workspaceId,isPreview:()=>cloud.preview,go,openModal,closeModal,toast,persist:persistPreferences});
 document.addEventListener('apollo-new-project',()=>agency.newProject());
