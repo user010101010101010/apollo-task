@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import{matrix,groupMatrix,inverse,resize,identity}from'../public/pptx-model.js';
+const pt=(m,x,y)=>({x:m[0]*x+m[2]*y+m[4],y:m[1]*x+m[3]*y+m[5]}),near=(a,b)=>assert.ok(Math.abs(a-b)<.001,`${a} != ${b}`);
+const g={x:700000,y:900000,w:4000000,h:2000000,rot:0,flipH:false,flipV:false,childX:50000,childY:100000,childW:2000000,childH:1000000};
+test('group matrices convert screen vectors back into child coordinates',()=>{const m=groupMatrix({...g,rot:35,flipH:true},identity),v=pt(m,350000,180000),o=pt(m,0,0),p=inverse(m,v.x-o.x,v.y-o.y);near(p.x,350000);near(p.y,180000);});
+test('resizing a rotated flipped object preserves its opposite anchor',()=>{for(const rot of[0,30,90,180])for(const flipH of[false,true])for(const flipV of[false,true]){const a={...g,rot,flipH,flipV},b=resize(a,'se',500000,300000),p=pt(matrix(a),0,0),q=pt(matrix(b),0,0);near(p.x,q.x);near(p.y,q.y);assert.equal(b.w,4500000);assert.equal(b.h,2300000);}});
+test('aspect resizing and minimum sizes remain valid',()=>{const a=resize(g,'se',1000000,0,true);near(a.w/a.h,2);assert.ok(resize(g,'nw',9000000,9000000).w>=12700);assert.throws(()=>inverse([0,0,0,0,0,0],1,1));});
