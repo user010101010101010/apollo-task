@@ -1,6 +1,6 @@
 {
   "name": "apollo-task",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -12,7 +12,7 @@
     "start": "node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/state --ip 127.0.0.1 --inspector-port 0",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
-    "check": "node --check public/office-edit.js && node --check public/office-edit-model.js && node scripts/build-viewers.mjs && node --check public/file-viewer.js && node --check public/viewer-model.js && node --check public/spreadsheet-worker.js && node --check public/files.js && node --check public/file-model.js && node --check server/attachments.mjs && node --check public/search.js && node --check public/search-model.js && node --check public/people-settings.js && node --check server/media.mjs && node --check public/template-catalog.js && node --check public/sidebar.js && node --check public/sidebar-model.js && node --check public/app.js && node --check public/addons.js && node --check public/agency.js && node --check public/access.js && node --check server/login.mjs && node --check server/api.mjs && node --test tests/server.test.mjs tests/domain.test.js tests/agency.test.mjs tests/login.test.mjs tests/sidebar.test.mjs tests/workspace.test.mjs tests/templates.test.mjs tests/search.test.mjs tests/media.test.mjs tests/files.test.mjs tests/viewers.test.mjs tests/file-editing.test.mjs",
+    "check": "node --check tests/office-format.browser.js && node --check public/office-format.js && node --check public/office-ribbon.js && node --check public/office-edit.js && node --check public/office-edit-model.js && node scripts/build-viewers.mjs && node --check public/file-viewer.js && node --check public/viewer-model.js && node --check public/spreadsheet-worker.js && node --check public/files.js && node --check public/file-model.js && node --check server/attachments.mjs && node --check public/search.js && node --check public/search-model.js && node --check public/people-settings.js && node --check server/media.mjs && node --check public/template-catalog.js && node --check public/sidebar.js && node --check public/sidebar-model.js && node --check public/app.js && node --check public/addons.js && node --check public/agency.js && node --check public/access.js && node --check server/login.mjs && node --check server/api.mjs && node --test tests/server.test.mjs tests/domain.test.js tests/agency.test.mjs tests/login.test.mjs tests/sidebar.test.mjs tests/workspace.test.mjs tests/templates.test.mjs tests/search.test.mjs tests/media.test.mjs tests/files.test.mjs tests/viewers.test.mjs tests/file-editing.test.mjs",
     "gateway": "node scripts/build-viewers.mjs && node scripts/build-gateway.mjs",
     "build:viewers": "node scripts/build-viewers.mjs"
   },
