@@ -1,4 +1,5 @@
 const paths = {
+  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   phone:'<path d="M6 3H3c0 10 8 18 18 18v-3l-5-3-2 2-7-7 2-2z"/>',
   logOut:'<path d="M9 5H4v14h5M13 8l4 4-4 4M8 12h13"/>',
   camera:'<path d="m8 5 1.5-2h5L16 5h4v15H4V5z"/><circle cx="12" cy="12" r="4"/>',

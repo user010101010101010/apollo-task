@@ -209,14 +209,27 @@ input::placeholder,textarea::placeholder{color:#819e98;opacity:1}
 .widget-edit-controls .icon-btn{width:30px;min-width:30px;height:30px;min-height:30px;border-color:#3d6050;color:#b2d1b7}
 .widget-gallery{gap:16px}.widget-gallery button{background:#102227;border-color:#395b55;padding:22px;border-radius:12px;gap:14px}.widget-gallery small{font-size:12px;line-height:1.75;color:#a3bfae}
 .toast{background:#18312b;border-color:#54775e;color:#d5ecd1;border-radius:9px;padding:14px 18px;gap:11px;line-height:1.5;font-size:13px}
-.apollo-login{background:radial-gradient(ellipse at 15% 18%,#284e3420,transparent 48%),radial-gradient(ellipse at 90% 90%,#1d516c24,transparent 58%),#060a0c;padding:32px;min-height:100dvh}
-.apollo-login:before{background:linear-gradient(130deg,#b3eaa00c,transparent 50%,#8acfe50b);pointer-events:none}
-.apollo-login-card{width:min(100%,440px);padding:40px;border:1px solid #36514e;background:#0d1a1ee8;border-radius:18px;box-shadow:0 32px 100px #0005}
-.apollo-login-card .brand{font-size:24px;font-weight:600;gap:12px}.apollo-login-card .brand img{width:36px;height:36px}
-.apollo-login-card h1{font-size:30px;font-weight:400;letter-spacing:-1px;line-height:1.3;margin:32px 0 26px}
-.apollo-login-card .field{margin-bottom:20px;gap:9px;font-size:12px}.apollo-login-card .field input{min-height:46px;padding:12px 14px;font-size:14px}
-.apollo-login-card .btn.full{min-height:46px;margin-top:8px;justify-content:space-between;padding:12px 16px;font-size:13px}
-.apollo-login-card .form-error:empty{display:none}
+.apollo-login{position:relative;isolation:isolate;display:grid;place-items:center;min-height:100dvh;padding:32px;background:#060a0c;overflow:hidden}
+.apollo-login:before,.apollo-login:after{content:none}
+.login-ambient{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.login-ambient-glow{position:absolute;inset:-12%;background:radial-gradient(ellipse at 15% 74%,#93da7c16,transparent 48%),radial-gradient(ellipse at 85% 86%,#399bc321,transparent 48%);animation:login-light-drift 24s ease-in-out infinite alternate}
+.login-mesh{display:block;width:100%;height:100%;position:absolute;inset:0;opacity:.85;mask-image:linear-gradient(transparent 24%,#000b 60%,#000 100%)}
+.apollo-login-card{position:relative;z-index:1;width:min(100%,440px);padding:36px;background:#0c191eed;border:1px solid #365158;border-radius:18px;box-shadow:0 28px 90px #0005}
+.apollo-login-card .brand{justify-content:center;font-size:24px;font-weight:600;gap:12px;margin:0 0 24px}
+.apollo-login-card .brand img{width:36px;height:36px}
+.apollo-login-card h1{text-align:center;font-size:30px;font-weight:400;letter-spacing:-1px;line-height:1.3;margin:0 0 28px}
+.apollo-login-card form{display:flex;flex-direction:column;gap:20px;min-width:0}
+.apollo-login-card .field{display:flex;flex-direction:column;margin:0;gap:9px;font-size:13px;line-height:1.5;color:#b5c9c1;min-width:0}
+.apollo-login-card .field input{height:52px;min-height:52px;margin:0;padding:13px 14px;background:#09151a;border:1px solid #3b575d;border-radius:8px;color:#e7f0ec;font-size:15px;line-height:1.5;box-shadow:none}
+.apollo-login-card .field input:hover{border-color:#5d7b7d}.apollo-login-card .field input:focus{border-color:#8acfe5;outline:2px solid #8acfe54d;outline-offset:2px}
+.apollo-login-card input::placeholder{font-size:14px;color:#829c99}
+.password-input{position:relative;min-width:0}.apollo-login-card .password-input input{padding-right:58px;width:100%}
+.login-password-toggle{position:absolute;right:4px;top:4px;display:flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;color:#9fb8b2;border:1px solid transparent;border-radius:6px;background:transparent;cursor:pointer}
+.login-password-toggle .icon{display:block;width:20px;height:20px;margin:0;flex:none}.login-password-toggle:hover{background:#193139;color:#cce9dd}.login-password-toggle[aria-pressed=true]{color:#b3eaa0;background:#152c2c}.login-password-toggle:focus-visible{outline:2px solid #8acfe5;outline-offset:1px}
+.apollo-login-card .btn.full{display:flex;align-items:center;justify-content:center;width:100%;height:52px;min-height:52px;margin:4px 0 0;padding:13px 18px;font-size:14px;line-height:1.5;text-align:center}
+.apollo-login-card .form-error{margin:0;font-size:13px;line-height:1.6;color:#ffc2bd;overflow-wrap:anywhere}.apollo-login-card .form-error:empty{display:none}
+@keyframes login-light-drift{from{transform:translate(-2%,1%) scale(1)}to{transform:translate(3%,-2%) scale(1.06)}}
+@media(prefers-reduced-motion:reduce){.login-ambient-glow{animation:none}}
 @media(max-width:1180px){
  .topbar,.sidebar-ready .topbar{gap:14px;padding-inline:18px}.top-actions{gap:8px}.topbar .global-search{min-width:130px}
  .page-content{padding-inline:26px}.main-footer{margin-inline:26px}.page-heading{gap:18px}.page-heading>.button-row{flex-wrap:wrap;max-width:50%}
@@ -255,7 +268,7 @@ input::placeholder,textarea::placeholder{color:#819e98;opacity:1}
  .modal{width:calc(100vw - 24px);max-height:calc(100dvh - 24px);border-radius:12px}.modal-header{padding:18px 20px 16px;gap:14px}.modal-header h2{font-size:19px;line-height:1.4}.modal-body,.sidebar-settings-modal .modal-body{padding:18px 20px 22px;max-height:calc(100dvh - 112px)}.modal-description{font-size:12px;line-height:1.75;margin-bottom:20px}.modal-footer{gap:10px;margin-top:22px;padding-top:18px;flex-wrap:wrap}.modal-footer .button-row{flex-wrap:wrap;gap:9px}
  .field{font-size:12px;gap:8px;margin-bottom:18px}.field input:not([type=checkbox]):not([type=radio]),.field select,.field textarea{font-size:16px;padding:11px 12px}.field select{padding-right:38px}.form-grid{grid-template-columns:1fr;gap:0}.form-grid .field{margin-bottom:18px}
  .command-search-field input{font-size:16px}.command-search-tabs{gap:5px}.command-search-tabs button{font-size:11px;padding:8px 9px}.command-search-footer{gap:10px;font-size:10px;line-height:1.6}.sidebar-custom-label{font-size:12px;gap:12px}.sidebar-reorder-row>label{font-size:12px}
- .apollo-login{padding:24px}.apollo-login-card{padding:32px 26px;border-radius:16px}.apollo-login-card .brand{font-size:23px}.apollo-login-card h1{font-size:29px;margin:28px 0 24px}.apollo-login-card .field input{font-size:16px;min-height:48px}.apollo-login-card .btn.full{min-height:48px}
+ .apollo-login{padding:24px}.apollo-login-card{padding:32px 26px;border-radius:16px}.apollo-login-card .brand{font-size:23px;margin-bottom:22px}.apollo-login-card h1{font-size:28px;margin:0 0 26px}.apollo-login-card .field input{font-size:16px;min-height:52px}.apollo-login-card .btn.full{min-height:52px}.apollo-login-card form{gap:20px}
 }
 @media(max-width:420px){.topbar,.sidebar-ready .topbar{padding-inline:10px;gap:6px}.topbar-brand,.sidebar-ready .topbar-brand{gap:6px}.topbar .brand{font-size:18px;gap:6px}.topbar .brand img{width:25px;height:25px}.top-actions{gap:5px}.topbar .create-btn{padding:8px;gap:5px;font-size:10px}.topbar .create-btn>span{display:none}.topbar .create-btn{min-width:34px;width:34px}.topbar .global-search{min-width:28px;width:28px;max-width:28px}.page-content{padding-inline:16px}.main-footer{margin-inline:16px}.knowledge-filters{grid-template-columns:1fr;gap:16px}.knowledge-row{padding:14px;gap:10px}.personal-identity{gap:14px}.personal-title h2{font-size:20px}.personal-identity .personal-portrait{flex-basis:58px}.personal-portrait>.avatar{width:58px;height:58px;font-size:20px}.apollo-login{padding:18px}.apollo-login-card{padding:30px 24px}.modal-header,.modal-body,.sidebar-settings-modal .modal-body{padding-inline:18px}}
 @media(prefers-reduced-motion:reduce){.btn,.project-card,.task-template-card,.person-card{transition:none}}
