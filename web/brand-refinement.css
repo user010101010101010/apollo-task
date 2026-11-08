@@ -36,9 +36,9 @@ button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,t
 .subtle,.modal-description{color:var(--muted);line-height:1.7}
 .topbar,.sidebar-ready .topbar{height:68px;gap:20px;padding:0 24px;background:#091014;border-bottom:1px solid #25363a}
 .topbar-brand,.sidebar-ready .topbar-brand{gap:12px;flex-shrink:0}
-.brand{gap:10px;font-size:23px;letter-spacing:-.8px;font-weight:600;color:#edf3ef}
+.brand{gap:10px;line-height:1;align-items:center;font-size:23px;letter-spacing:-.8px;font-weight:600;color:#edf3ef}
 .brand img{width:31px;height:31px;flex:none}
-.brand-task{margin-left:8px;padding:4px 8px;border:1px solid #3a5043;background:#13251c;color:#b6dfa8;font-size:12px;line-height:1.2;font-weight:600;letter-spacing:-.2px;border-radius:5px}
+.brand-task{display:inline-flex;align-items:center;justify-content:center;align-self:center;flex:0 0 auto;height:26px;margin:0;padding:0 9px;border:1px solid #3a5043;background:#13251c;color:#b6dfa8;font-size:12px;line-height:1;font-weight:600;letter-spacing:0;border-radius:5px}
 .topbar .global-search{height:40px;padding:10px 14px;border-radius:7px;background:#0e1a1e;border:1px solid #30464b;color:#a5b6b5;min-width:160px;max-width:720px;gap:11px}
 .topbar .global-search:hover{background:#132328;border-color:#60817e}
 .topbar .global-search>span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -54,9 +54,10 @@ kbd,.global-search kbd{background:#18272b;border-color:#395055;color:#a6bdb9;fon
 .avatar{font-family:var(--font);font-weight:600;flex-shrink:0}
 .avatar.green{background:#284132;color:#c2e5ac}.avatar.blue{background:#203d49;color:#aad9e8}.avatar.purple{background:#35304a;color:#cfc0e7}.avatar.orange{background:#493c2c;color:#e8c79a}
 .sidebar,.sidebar-ready .sidebar{top:68px;background:var(--sidebar);border-right:1px solid #23363b}
-.sidebar-toolbar{padding-bottom:14px;align-items:center}
+.sidebar-toolbar{height:28px;min-height:28px;padding:0 0 0 7px;margin:0 0 8px;align-items:center;flex-shrink:0}
+.sidebar-toolbar .icon-btn{width:28px;min-width:28px;height:28px;min-height:28px;padding:0}
 .sidebar-toolbar>span{font-size:10px;letter-spacing:1.1px;color:#8ea6a6}
-.workspace-switch{gap:11px;padding:10px 8px 18px;margin-bottom:12px;border-bottom-color:#2a3c3f;min-height:76px}
+.workspace-switch,.sidebar-ready .workspace-switch{gap:11px;padding:4px 8px 16px;margin:0 0 10px;border-bottom-color:#2a3c3f;min-height:60px}
 .workspace-switch>span:nth-child(2){min-width:0;flex:1;text-align:left}
 .workspace-switch strong{font-size:12px;font-weight:600;line-height:1.5;color:#dce9e2}
 .workspace-switch small{font-size:11px;line-height:1.5;color:#92aaa5;margin-top:4px}
