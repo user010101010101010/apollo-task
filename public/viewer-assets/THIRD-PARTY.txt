@@ -1,0 +1,1 @@
+Self-hosted file viewers: docx-preview 0.4.1 (Apache-2.0), JSZip (MIT/GPL), fflate (MIT), SheetJS Community Edition 0.20.3 (Apache-2.0). SheetJS source: https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js
