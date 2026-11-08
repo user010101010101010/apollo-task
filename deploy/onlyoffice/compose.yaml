@@ -1,0 +1,33 @@
+services:
+  docs:
+    image: onlyoffice/documentserver:latest
+    restart: unless-stopped
+    environment:
+      JWT_ENABLED: 'true'
+      JWT_SECRET: ${JWT_SECRET:?Set a random JWT_SECRET in .env}
+      JWT_HEADER: Authorization
+    volumes:
+      - docs_data:/var/www/onlyoffice/Data
+      - docs_logs:/var/log/onlyoffice
+      - docs_lib:/var/lib/onlyoffice
+      - docs_db:/var/lib/postgresql
+    expose: ['80']
+    shm_size: '2gb'
+  https:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOCS_HOST: ${DOCS_HOST:?Set DOCS_HOST in .env}
+    ports: ['80:80', '443:443', '443:443/udp']
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [docs]
+volumes:
+  docs_data:
+  docs_logs:
+  docs_lib:
+  docs_db:
+  caddy_data:
+  caddy_config:

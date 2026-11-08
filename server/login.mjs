@@ -1,3 +1,4 @@
+import {handlePresentationOffice} from './presentation-office.mjs';
 import {z} from 'zod';
 import {handleAPI,initialState} from './api.mjs';
 const COOKIE='__Host-apollo_session',DAY=86400000,now=()=>Date.now(),iso=()=>new Date().toISOString();
@@ -20,6 +21,7 @@ function setupAllowed(native,env){return Boolean(native&&env.APOLLO_OWNER_EMAIL&
 async function appendPerson(db,wid,a,job,department,responsibility){for(let attempt=0;attempt<5;attempt++){const row=await db.prepare('SELECT * FROM workspaces WHERE id=?').bind(wid).first();const state=JSON.parse(row.state);if(state.people.some(x=>x.id===a.id))return;state.people.push({id:a.id,name:a.name,email:a.email,role:job||'Сотрудник',team:department||'',responsibility:responsibility||'',color:'blue'});const changed=await db.prepare('UPDATE workspaces SET state=?,revision=revision+1,updated=? WHERE id=? AND revision=?').bind(JSON.stringify(state),iso(),wid,row.revision).run();if(changed.meta.changes)return;}throw fail('Обновите список сотрудников',409);}
 export async function handleRequest(request,env,nativeUser){try{
  const url=new URL(request.url),path=url.pathname.replace(/^\/api\//,''),method=request.method;
+ if(['presentation-office/download','presentation-office/callback'].includes(path))return handlePresentationOffice(request,env,null);
  if(path==='health')return handleAPI(request,env,null);
  if(!env.DB)return json({error:'База данных временно недоступна'},503);const db=env.DB;
  const formLogin=path==='auth/login'&&method==='POST'&&!request.headers.get('content-type')?.includes('application/json');
@@ -62,6 +64,7 @@ export async function handleRequest(request,env,nativeUser){try{
  if(path==='auth/reset'&&method==='POST'){
   const d=await read(request);await owner(db,d.workspaceId,account);const target=await db.prepare('SELECT a.*,m.role FROM login_accounts a JOIN members m ON m.user_id=a.id WHERE m.workspace_id=? AND a.id=?').bind(d.workspaceId,d.userId).first();if(!target||target.id===account.id||target.is_operator||target.role==='owner')throw fail('Этот пароль меняет сам владелец учётной записи',403);const password='Ap!'+random().slice(0,21),salt=random();await db.batch([db.prepare('UPDATE login_accounts SET password_hash=?,salt=?,must_change=1 WHERE id=?').bind(await passwordHash(password,salt),salt,target.id),db.prepare('DELETE FROM login_sessions WHERE account_id=?').bind(target.id)]);return json({login:target.login,password,name:target.name,url:url.origin});
  }
+ if(path.startsWith('presentation-office/'))return handlePresentationOffice(request,env,identity(account));
  if(path.startsWith('auth/'))return json({error:'Неизвестный маршрут'},404);
  if(path==='register'||(path==='workspace'&&method==='POST')||path==='invitations'||path==='join')throw fail('Учётные записи выдаёт Apollo или администратор компании',403);
  if(path==='bootstrap'&&!(await db.prepare('SELECT workspace_id FROM members WHERE user_id=? LIMIT 1').bind(account.id).first()))throw fail('Доступ к компании отозван. Обратитесь к администратору',403);

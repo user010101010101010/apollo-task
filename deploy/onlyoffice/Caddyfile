@@ -1,0 +1,3 @@
+{$DOCS_HOST} {
+  reverse_proxy docs:80
+}
