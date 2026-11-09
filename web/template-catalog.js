@@ -437,7 +437,7 @@ const specs=[
  },
  {
   "id": "quote-estimate",
-  "title": "Расчёт коммерческого предложения",
+  "title": "Внутренний расчёт стоимости",
   "category": "Продажи",
   "description": "Собрать составляющие стоимости и согласовать условия.",
   "result": "Расчёт связан с объёмом и исходными допущениями.",
@@ -2523,5 +2523,6 @@ const specs=[
  }
 ];
 function section(b){const title='<h2>'+e(b.title)+'</h2>';if(b.kind==='text')return title+'<p>['+e(b.hint)+']</p>';if(b.kind==='fields')return title+'<table><thead><tr><th>Поле</th><th>Данные</th></tr></thead><tbody>'+b.labels.map(x=>'<tr><td>'+e(x)+'</td><td><br></td></tr>').join('')+'</tbody></table>';if(b.kind==='checks')return title+'<table><thead><tr><th>Что проверить</th><th>Результат / замечание</th><th>Кто проверил</th></tr></thead><tbody>'+b.items.map(x=>'<tr><td>'+e(x)+'</td><td><br></td><td><br></td></tr>').join('')+'</tbody></table>';return title+'<table><thead><tr>'+b.columns.map(x=>'<th>'+e(x)+'</th>').join('')+'</tr></thead><tbody>'+Array.from({length:3},()=>'<tr>'+b.columns.map(()=>'<td><br></td>').join('')+'</tr>').join('')+'</tbody></table>';}
+specs.unshift({id:'commercial-proposal',title:'Коммерческое предложение',category:'Продажи',builder:'proposal',description:'От задачи клиента до расчёта стоимости и готового предложения в Word или PDF.',result:'Предложение с точным составом, ценой, условиями и следующим шагом.',role:'Менеджер по продажам, инженер, руководитель',documentType:'Коммерческое предложение',sections:[{kind:'fields',title:'Клиент и задача',labels:['Компания клиента','Запрос и ожидаемый результат','Предлагаемое решение']},{kind:'table',title:'Состав и стоимость',columns:['Наименование','Характеристики','Количество','Цена','Скидка','Сумма']},{kind:'fields',title:'Условия',labels:['Оплата','Сроки и доставка','Срок действия','Следующий шаг']}]});
 export const documentTemplates=specs.map((s,i)=>({...s,icon:departmentCatalog.find(d=>d.name===s.category)?.icon||'file',color:['green','blue','purple','orange'][i%4],tags:[s.category],content:'<p class="lead">'+e(s.description)+'</p>'+s.sections.map(section).join('')+section({kind:'table',title:'Следующие действия',columns:['Действие','Ответственный','Срок','Подтверждение']})}));
 export function filterTemplates(templates,{department='Все',query=''}={}){const q=query.trim().toLocaleLowerCase('ru');return templates.filter(t=>(department==='Все'||t.category===department)&&(!q||[t.title,t.category,t.description,t.role,t.result].join(' ').toLocaleLowerCase('ru').includes(q)));}
