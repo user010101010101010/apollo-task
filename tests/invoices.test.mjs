@@ -16,3 +16,14 @@ test('invoice settings and line VAT survive schema validation and all exports us
 test('mixed invoice VAT calculates cents per line for included, added and exempt amounts',()=>{const p={...invoiceFixture(),itemTaxRates:true,items:[['22','122'],['10','110'],['0','100'],['5','105'],['7','107'],['none','100']].map(([taxRate,price])=>({...invoiceFixture().items[0],quantity:'1',price,taxRate}))};let t=proposalTotals(p);assert.equal(t.taxReady,true);assert.equal(t.subtotal,644);assert.equal(t.total,644);assert.equal(t.tax,44);assert.deepEqual(t.rows.map(r=>r.tax),[22,10,0,5,7,0]);assert.equal(t.taxBreakdown.length,6);p.taxMode='extra';p.items=p.items.map(r=>({...r,price:'100'}));t=proposalTotals(p);assert.equal(t.subtotal,600);assert.equal(t.tax,44);assert.equal(t.total,644);assert.deepEqual(t.rows.map(r=>r.total),[122,110,100,105,107,100]);assert.ok(invoiceDocument(p).rows[0].at(-1).includes('122'));p.taxMode='none';t=proposalTotals(p);assert.equal(t.tax,0);assert.equal(t.total,600);});
 test('old saved invoices retain their VAT and missing new fields remain compatible',()=>{const p=invoiceFixture();for(const key of ['sellerRole','buyerRole','hideBasis','itemTaxRates','showAccountant','buyerPhone','buyerEmail','signatoryRole'])delete p[key];p.taxRate='20';assert.deepEqual(proposalSchema.parse(p),p);assert.equal(proposalTotals(p).tax,50.25);assert.ok(invoiceDocument(p).totals.some(row=>row[0].includes('20%')));});
 test('invoice suggestions are limited to saved invoices of the supplied workspace',async()=>{const {invoiceCounterparties}=await import('../public/invoice-form.js');const p=invoiceFixture();const parties=invoiceCounterparties({pages:[{proposal:p},{proposal:{...p,client:p.client}},{proposal:{title:'Обычное КП',client:'Другая компания'}}]});assert.equal(parties.length,2);assert.ok(parties.some(x=>x.name===p.client));assert.ok(!parties.some(x=>x.name==='Другая компания'));assert.deepEqual(invoiceCounterparties({pages:[]}),[]);});
+
+test('download names use the invoice date for both formats and preserve it after sanitizing long numbers',async()=>{
+ const {invoiceFilename}=await import('../public/invoice-model.js');
+ const p={...invoiceFixture(),number:'QA-42',date:'2026-10-30'};
+ assert.equal(invoiceFilename(p,'pdf'),'Счёт на оплату № QA-42 от 30.10.2026.pdf');
+ assert.equal(invoiceFilename(p,'docx'),'Счёт на оплату № QA-42 от 30.10.2026.docx');
+ const long=invoiceFilename({...p,number:'A/B:*?"<>|'.repeat(20)},'pdf');
+ assert.ok(long.endsWith(' от 30.10.2026.pdf'));
+ assert.ok(!/[\\/:*?"<>|]/.test(long));
+ assert.ok(!invoiceFilename({...p,date:'2026-02-31'},'pdf').includes('31.02.2026'));
+});
