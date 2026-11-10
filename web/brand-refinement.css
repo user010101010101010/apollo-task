@@ -341,3 +341,48 @@ input[type=checkbox],input[type=radio]{border-color:#54716c!important;background
 @media(max-width:600px){.review-section{margin-top:24px}.review-section>.section-heading{margin-bottom:12px}.review-section .section-heading h2{font-size:16px;gap:8px}.review-card{padding:18px;gap:16px}.review-card h3{font-size:15px}.review-card-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:10px}.review-card-actions .btn{font-size:12px;white-space:normal;padding:10px 12px;min-height:44px}.review-card-actions .btn:only-child{grid-column:1/-1}.review-card>.review-card-side{width:100%;gap:12px}.review-history-empty{font-size:13px}.page-heading:has(.profile-logout){flex-wrap:wrap;gap:16px}.page-heading>.profile-logout{min-height:42px;font-size:12px;padding:10px 16px}#review-decision-form{gap:18px}.review-decision-modal .modal-header h2{font-size:18px}}
 
 #review-decision-form select{appearance:none;-webkit-appearance:none;padding-right:40px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a4bab0' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center}
+
+/* Collection tabs and favorites use a single, consistent baseline. */
+.tabs.template-tabs{display:flex;align-items:stretch;gap:28px;min-height:48px;margin:0 0 24px;border-bottom:1px solid #2a4146;overflow-x:auto;max-width:100%}
+.tabs.template-tabs button{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:auto;min-height:48px;padding:12px 0;line-height:1.5;font-size:13px;white-space:nowrap}
+.tabs.template-tabs button>span{display:inline-flex;align-items:center;justify-content:center;margin:0;min-width:24px;min-height:22px;padding:2px 6px;line-height:1;font-size:11px}
+.tabs.template-tabs button.active:after{left:0;right:0;bottom:0;height:2px}
+.template-workspace.template-workspace-favorites{grid-template-columns:minmax(0,1fr)}
+.template-workspace-favorites .task-template-grid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.template-workspace-favorites .template-searchbar .inline-search{max-width:640px}
+.template-workspace .template-results{min-width:0}
+/* Keep the divider below the controls and remove accumulated card margins. */
+.tasks-toolbar{padding:0 0 12px;align-items:center;gap:20px}
+.tasks-toolbar>.tabs{display:flex;align-items:stretch;margin:0;min-height:44px;gap:24px;min-width:0}
+.tasks-toolbar .tabs button{height:auto;min-height:44px;padding-top:10px;padding-bottom:10px;display:inline-flex;align-items:center;gap:8px}
+.tasks-toolbar .tabs button>span{margin:0;line-height:1.4}
+.tasks-toolbar .tabs button.active:after{bottom:0}
+.tasks-toolbar .task-toolbar-right{align-items:center;margin:0;padding:0;gap:12px}
+.tasks-toolbar .segmented{align-items:center;flex-shrink:0;margin:0}
+.kanban-column>.column-heading{padding:0;min-height:32px;margin:0 0 14px}
+.kanban-column .kanban-cards{gap:12px;min-height:0}
+.kanban-cards>.task-card{margin:0}
+.kanban-column>.add-card{margin:8px 0 0;min-height:36px;padding:8px 4px;gap:8px;line-height:1.5}
+.member-access-modal{width:610px;max-width:100%}
+.member-access-name{font-size:17px;line-height:1.5;margin:0 0 10px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+.member-access-modal .modal-description{margin-bottom:20px;font-size:13px;line-height:1.7}
+.member-capabilities{border:0;padding:0;margin:22px 0 0;min-width:0}
+.member-capabilities legend{font-size:12px;color:var(--muted);padding:0;margin-bottom:12px}
+#member-capability-options{display:grid;gap:10px}
+.member-capability{display:flex;align-items:flex-start;gap:12px;padding:14px;border:1px solid #2a4146;border-radius:10px;cursor:pointer;background:#0d191e}
+.member-capability input{flex-shrink:0;margin:2px 0 0}
+.member-capability>span{display:grid;gap:5px;min-width:0}
+.member-capability strong{font-size:13px;line-height:1.5;font-weight:600}
+.member-capability small{font-size:12px;line-height:1.6;color:var(--muted)}
+.member-capability:has(input:checked){border-color:#648268;background:#152b26}
+.member-capability.read-only{opacity:.65;cursor:default}
+#member-access-form .form-error:empty{display:none}
+#member-access-form .modal-footer{border:0;padding:0;margin-top:24px}
+#member-access-form [type=submit]{width:100%;justify-content:center;min-height:44px}
+.member-access-label{color:var(--muted);font-size:12px;line-height:1.5}
+.person-profile-actions{flex-wrap:wrap;gap:12px}
+.access-member .btn{white-space:nowrap;justify-content:center}
+@media(max-width:800px){.tasks-toolbar{flex-wrap:wrap;gap:16px}.tasks-toolbar>.tabs{width:100%}.tasks-toolbar .tabs button.active:after{bottom:0}.tasks-toolbar .task-toolbar-right{width:100%;justify-content:space-between}}
+@media(max-width:600px){.tabs.template-tabs{gap:20px;margin-bottom:20px}.tabs.template-tabs button{font-size:12px;min-height:46px}.tabs.template-tabs button>span{min-width:20px;min-height:20px;font-size:10px}.template-workspace-favorites .task-template-grid{grid-template-columns:minmax(0,1fr)}.tasks-toolbar .task-toolbar-right select{flex:1;max-width:calc(100% - 94px)}.member-capability{padding:12px}.member-access-modal .modal-header h2{font-size:18px}.member-access-label{width:100%}.access-member .btn{min-height:42px}.person-profile-actions .btn{flex:1;font-size:12px;min-height:42px}.kanban-column>.column-heading{margin-bottom:12px}}
+
+#member-access-form select,#task-space-filter{appearance:none;-webkit-appearance:none;padding-right:40px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a4bab0' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center}

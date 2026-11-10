@@ -9,3 +9,5 @@ export const attachmentVersions=sqliteTable('attachment_versions',{fileId:text('
 export const loginAccounts=sqliteTable('login_accounts',{id:text('id').primaryKey(),login:text('login').notNull().unique(),passwordHash:text('password_hash').notNull(),salt:text('salt').notNull(),name:text('name').notNull(),email:text('email').notNull(),isOperator:integer('is_operator').notNull().default(0),disabled:integer('disabled').notNull().default(0),mustChange:integer('must_change').notNull().default(1),created:text('created').notNull()});
 export const loginSessions=sqliteTable('login_sessions',{hash:text('hash').primaryKey(),accountId:text('account_id').notNull(),expires:integer('expires').notNull(),created:integer('created').notNull()});
 export const loginLimits=sqliteTable('login_limits',{key:text('key').primaryKey(),attempts:integer('attempts').notNull(),resetAt:integer('reset_at').notNull()});
+
+export const memberPermissions=sqliteTable('member_permissions',{workspaceId:text('workspace_id').notNull(),userId:text('user_id').notNull(),json:text('json').notNull()},t=>[primaryKey({columns:[t.workspaceId,t.userId]})]);

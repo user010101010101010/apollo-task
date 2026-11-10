@@ -1,3 +1,5 @@
+import {withPermissions,rosterPermissions,ensureMemberPermissions,requireCapability} from './permissions.mjs';
+import {deniedWorkspaceChange,MEMBER_CAPABILITIES,memberPermissions,canMember} from '../public/permissions.js';
 import {handleAttachments} from './attachments.mjs';
 import {handleCompanyMedia} from './media.mjs';
 import {z} from 'zod';
@@ -10,9 +12,9 @@ const fail=(message,status)=>Object.assign(new Error(message),{status});
 function requireEditor(member){if(!member||member.role==='viewer')throw fail('У вас доступ только для просмотра',403);}
 function requireOwner(member){if(member?.role!=='owner')throw fail('Нужны права владельца пространства',403);}
 async function body(request){if(Number(request.headers.get('content-length')||0)>8000000)throw fail('Слишком большой запрос',413);if(!request.headers.get('content-type')?.includes('application/json'))throw fail('Ожидается JSON',415);const text=await request.text();if(text.length>8000000)throw fail('Слишком большой запрос',413);return JSON.parse(text);}
-async function membership(db,wid,userId){const row=await db.prepare('SELECT * FROM members WHERE workspace_id=? AND user_id=?').bind(wid,userId).first();if(!row)throw fail('Нет доступа к этому пространству',403);return row;}
+async function membership(db,wid,userId){const row=await db.prepare('SELECT * FROM members WHERE workspace_id=? AND user_id=?').bind(wid,userId).first();if(!row)throw fail('Нет доступа к этому пространству',403);return withPermissions(db,wid,row);}
 async function load(db,wid){const row=await db.prepare('SELECT * FROM workspaces WHERE id=?').bind(wid).first();if(!row)throw fail('Пространство не найдено',404);return {...row,state:JSON.parse(row.state)};}
-async function roster(db,wid){return (await db.prepare('SELECT user_id,name,email,role,joined FROM members WHERE workspace_id=? ORDER BY joined').bind(wid).all()).results;}
+async function roster(db,wid){const list=(await db.prepare('SELECT user_id,name,email,role,joined FROM members WHERE workspace_id=? ORDER BY joined').bind(wid).all()).results;return rosterPermissions(db,wid,list);}
 async function userWorkspaces(db,userId){return (await db.prepare('SELECT w.id,w.name,m.role FROM workspaces w JOIN members m ON m.workspace_id=w.id WHERE m.user_id=? ORDER BY w.created').bind(userId).all()).results;}
 export function initialState(user,name){return validateWorkspace(agencyWorkspace({id:user.userId,name:user.displayName||user.email,email:user.email,agency:name,role:'Администратор компании'}));}
 async function createWorkspace(db,user,name,role){const wid=id(),s=role?validateWorkspace(agencyWorkspace({id:user.userId,name:user.displayName||user.email,email:user.email,agency:name,role})):initialState(user,name);delete s.favorites;delete s.dismissedWelcome;delete s.notificationsRead;await db.batch([db.prepare('INSERT INTO workspaces(id,name,state,revision,created,updated) VALUES(?,?,?,1,?,?)').bind(wid,name,JSON.stringify(s),now(),now()),db.prepare('INSERT INTO members(workspace_id,user_id,name,email,role,joined) VALUES(?,?,?,?,?,?)').bind(wid,user.userId,user.displayName||user.email,user.email,'owner',now())]);return wid;}
@@ -29,7 +31,7 @@ export async function handleAPI(request,env,user){try{
     let list=await userWorkspaces(db,user.userId),wid=url.searchParams.get('workspace')||list[0]?.id;
     if(!wid){wid=await createWorkspace(db,user,'Моя компания');list=await userWorkspaces(db,user.userId);}
     const member=await membership(db,wid,user.userId),data=await load(db,wid),prefs=await db.prepare('SELECT json FROM preferences WHERE workspace_id=? AND user_id=?').bind(wid,user.userId).first();
-    return response({user:{id:user.userId,name:member.name,email:member.email,role:member.role},workspaceId:wid,revision:data.revision,state:data.state,preferences:prefs?JSON.parse(prefs.json):{},workspaces:list,members:await roster(db,wid)});
+    return response({user:{id:user.userId,name:member.name,email:member.email,role:member.role,permissions:member.permissions},workspaceId:wid,revision:data.revision,state:data.state,preferences:prefs?JSON.parse(prefs.json):{},workspaces:list,members:await roster(db,wid)});
   }
   if(path==='workspace'&&method==='POST'){const data=await body(request),name=str(80).min(1).parse(data.name?.trim());return response({workspaceId:await createWorkspace(db,user,name,'Администратор компании')},201);}
   if(path==='workspace'&&method==='PUT'){
@@ -40,6 +42,7 @@ export async function handleAPI(request,env,user){try{
     if(member.role!=='owner'&&parsed.workspace!==old.name)throw fail('Только владелец может менять название пространства',403);
     for(const m of await roster(db,wid))if(!parsed.people.some(p=>p.id===m.user_id))throw fail('Нельзя удалить карточку участника с действующим доступом',400);
     validateReviews(old.state,parsed,user.userId,await roster(db,wid));
+    const denied=deniedWorkspaceChange(validateWorkspace(old.state),parsed,member,user.userId);if(denied)requireCapability(member,denied);
     const result=await db.prepare('UPDATE workspaces SET name=?,state=?,revision=revision+1,updated=? WHERE id=? AND revision=?').bind(parsed.workspace,JSON.stringify(parsed),now(),wid,data.revision).run();
     if(!result.meta.changes)return response({error:'Данные изменились. Перезагрузите пространство.',code:'CONFLICT'},409);return response({revision:data.revision+1});
   }
@@ -51,14 +54,19 @@ export async function handleAPI(request,env,user){try{
     await db.prepare('INSERT INTO members(workspace_id,user_id,name,email,role,joined) VALUES(?,?,?,?,?,?) ON CONFLICT(workspace_id,user_id) DO NOTHING').bind(inv.workspace_id,user.userId,user.displayName||user.email,user.email,inv.role,now()).run();
     for(let attempt=0;attempt<4;attempt++){const row=await load(db,inv.workspace_id);if(row.state.people.some(p=>p.id===user.userId))break;row.state.people.push({id:user.userId,name:user.displayName||user.email,email:user.email,role:'Участник команды',team:'Команда',responsibility:'Добавьте вашу зону ответственности в профиле.',color:'blue'});const r=await db.prepare('UPDATE workspaces SET state=?,revision=revision+1,updated=? WHERE id=? AND revision=?').bind(JSON.stringify(row.state),now(),row.id,row.revision).run();if(r.meta.changes)break;if(attempt===3)throw fail('Повторите открытие пространства',409);}return response({workspaceId:inv.workspace_id});
   }
-  if(path==='members'&&method==='PUT'){const d=await body(request);requireOwner(await membership(db,d.workspaceId,user.userId));if(d.userId===user.userId)throw fail('Нельзя изменить собственный доступ',400);const role=z.enum(['editor','viewer']).parse(d.role);await db.prepare('UPDATE members SET role=? WHERE workspace_id=? AND user_id=? AND role!=?').bind(role,d.workspaceId,d.userId,'owner').run();return response({ok:true});}
-  if(path==='members'&&method==='DELETE'){const d=await body(request);requireOwner(await membership(db,d.workspaceId,user.userId));if(d.userId===user.userId)throw fail('Нельзя удалить свой доступ',400);await db.prepare('DELETE FROM members WHERE workspace_id=? AND user_id=? AND role!=?').bind(d.workspaceId,d.userId,'owner').run();return response({ok:true});}
+  if(path==='members'&&method==='PUT'){
+    const d=await body(request),wid=person.parse(d.workspaceId),uid=person.parse(d.userId);requireOwner(await membership(db,wid,user.userId));if(uid===user.userId)throw fail('Нельзя изменить собственный доступ',400);
+    const target=await membership(db,wid,uid);if(target.role==='owner')throw fail('Права руководителя изменять нельзя',403);
+    const role=z.enum(['editor','viewer']).parse(d.role),schema=z.object(Object.fromEntries(MEMBER_CAPABILITIES.map(({id})=>[id,z.boolean()]))).strict(),permissions=memberPermissions({role,permissions:d.permissions===undefined?(target.role==='viewer'?undefined:target.permissions):schema.parse(d.permissions)});
+    await ensureMemberPermissions(db);await db.batch([db.prepare('UPDATE members SET role=? WHERE workspace_id=? AND user_id=? AND role!=?').bind(role,wid,uid,'owner'),db.prepare('INSERT INTO member_permissions(workspace_id,user_id,json) VALUES(?,?,?) ON CONFLICT(workspace_id,user_id) DO UPDATE SET json=excluded.json').bind(wid,uid,JSON.stringify(permissions))]);return response({ok:true,role,permissions});
+  }
+  if(path==='members'&&method==='DELETE'){const d=await body(request);requireOwner(await membership(db,d.workspaceId,user.userId));if(d.userId===user.userId)throw fail('Нельзя удалить свой доступ',400);const target=await membership(db,d.workspaceId,d.userId);if(target.role==='owner')throw fail('Права руководителя изменять нельзя',403);await db.batch([db.prepare('DELETE FROM members WHERE workspace_id=? AND user_id=? AND role!=?').bind(d.workspaceId,d.userId,'owner'),db.prepare('DELETE FROM member_permissions WHERE workspace_id=? AND user_id=?').bind(d.workspaceId,d.userId)]);return response({ok:true});}
   if(path==='attachments'||path.startsWith('files/')){const result=await handleAttachments(request,env,user,path);if(result)return result;}
   return response({error:'Неизвестный маршрут'},404);
 }catch(err){if(err instanceof z.ZodError)return response({error:'Проверьте заполнение полей'},400);return response({error:err.status?err.message:'Не удалось выполнить запрос. Попробуйте ещё раз.'},err.status||500);}}
 
 export function validateReviews(old,s,userId,members){
- const validMember=id=>members.some(m=>m.user_id===id&&m.role!=='viewer');
+ const validMember=id=>members.some(m=>m.user_id===id&&canMember(m,'reviews'));
  for(const r of s.reviews){const previous=(old.reviews||[]).find(x=>x.id===r.id),p=s.pages.find(p=>p.id===r.page);if(!previous){if(r.requestedBy!==userId||r.decision!=='pending'||!validMember(r.reviewer)||r.pageUpdated!==p.updated)throw fail('Проверьте получателя и версию согласования',400);}else if(JSON.stringify(previous)!==JSON.stringify(r)){if(r.page!==previous.page||r.reviewer!==previous.reviewer||r.requestedBy!==previous.requestedBy||r.pageUpdated!==previous.pageUpdated||r.project!==previous.project||r.created!==previous.created)throw fail('Нельзя менять данные существующего согласования',403);if(previous.decision!=='pending'||r.reviewer!==userId||!validMember(userId))throw fail('Решение принимает назначенный проверяющий',403);if(r.pageUpdated!==p.updated)throw fail('Материал изменился. Запросите новое согласование',409);if(r.decision==='changes'&&!r.comment.trim())throw fail('Опишите необходимые правки',400);}}
  for(const r of old.reviews||[])if(!s.reviews.some(x=>x.id===r.id)&&s.pages.some(p=>p.id===r.page))throw fail('История согласований сохраняется',400);
  for(const p of s.projects)if(p.stage==='done'&&(old.projects||[]).find(x=>x.id===p.id)?.stage!=='done'){const tasks=s.tasks.filter(t=>t.project===p.id),reviews=s.reviews.filter((r,i,a)=>r.project===p.id&&!a.slice(i+1).some(x=>x.page===r.page));if(tasks.some(t=>t.status!=='done')||reviews.some(r=>r.decision!=='approved'||r.pageUpdated!==s.pages.find(x=>x.id===r.page)?.updated))throw fail('Сначала закройте задачи и согласования проекта',400);}
