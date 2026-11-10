@@ -48,8 +48,8 @@ kbd,.global-search kbd{background:#18272b;border-color:#395055;color:#a6bdb9;fon
 .top-actions .top-divider{height:24px;background:#2c3e41;margin-inline:1px}
 .create-btn{gap:9px;padding:10px 16px}
 .create-btn .icon:last-child{width:13px;height:13px;flex-basis:13px}
-.logout-button{border-color:#33494b;color:#a4bab0}
-.logout-button:hover{background:#302025;color:#ffbdb1;border-color:#795650}
+
+
 .avatar-button{display:flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0}
 .avatar{font-family:var(--font);font-weight:600;flex-shrink:0}
 .avatar.green{background:#284132;color:#c2e5ac}.avatar.blue{background:#203d49;color:#aad9e8}.avatar.purple{background:#35304a;color:#cfc0e7}.avatar.orange{background:#493c2c;color:#e8c79a}
@@ -245,7 +245,7 @@ input::placeholder,textarea::placeholder{color:#819e98;opacity:1}
  .topbar,.sidebar-ready .topbar{height:60px;padding:0 12px;gap:8px}.topbar-brand,.sidebar-ready .topbar-brand{gap:8px}.brand{font-size:19px;gap:7px}.brand img{width:27px;height:27px}.brand-task{display:none}
  .topbar .global-search{min-width:30px;width:30px;max-width:30px;flex:0 0 30px;padding:0;height:36px;margin-left:auto;justify-content:center}.topbar .global-search span,.topbar .global-search kbd{display:none}
  .top-actions{gap:7px}.topbar .create-btn{min-height:36px;height:36px;padding:8px 10px;gap:6px;font-size:11px}.topbar .create-btn .icon{width:15px;height:15px;flex-basis:15px}
- .topbar .create-btn .icon:last-child,.top-actions .top-divider,.top-actions .help-top,.top-actions #account-logout{display:none}.topbar .create-btn>span{display:inline}
+ .topbar .create-btn .icon:last-child,.top-actions .top-divider,.top-actions .help-top,.topbar .create-btn>span{display:inline}
  .topbar .avatar-button{min-width:30px;width:30px;height:32px}.topbar .notification-btn{min-width:30px;width:30px;height:32px}.topbar .avatar-button .avatar{width:28px;height:28px;font-size:10px}
  .sidebar-ready .sidebar{top:60px!important}.sidebar-ready .sidebar .nav-item{font-size:12px;min-height:42px;padding-block:11px}.sidebar-ready .sidebar-row-remove{width:30px;height:32px}
  .page-content{padding:24px 18px 30px}.main-footer{margin:4px 18px 0;flex-wrap:wrap;padding:18px 0;font-size:10px}.page-content>.breadcrumb{margin-bottom:18px;font-size:11px}
@@ -309,3 +309,35 @@ input[type=checkbox],input[type=radio]{border-color:#54716c!important;background
 
 .comment-form textarea{min-height:100px;background:#0b171c;color:#dcebe1;border:1px solid #3a5356;border-radius:8px;padding:13px 14px;font:13px/1.7 var(--font)}.comment-form .btn{min-height:40px;padding:10px 15px;font-size:12px}.comment-form small{font-size:11px;line-height:1.6;color:#9bb1a7}
 @media(max-width:700px){.comment-form textarea{font-size:16px}.comment-form .btn{min-height:42px}}
+
+/* Approval cards share one content rhythm; actions remain adjacent. */
+.review-section{margin-top:28px}
+.review-section>.section-heading{margin:0 0 14px;gap:12px}
+.review-section .section-heading h2{display:flex;align-items:center;gap:10px;flex-wrap:wrap;line-height:1.5}
+.review-list{display:grid;gap:12px}
+.review-card{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:24px;margin:0;padding:24px}
+.review-card-content{min-width:0}
+.review-card .eyebrow{display:block;line-height:1.4}
+.review-card h3{margin:8px 0;font-size:16px;line-height:1.5;overflow-wrap:anywhere}
+.review-card h3 button{display:block;max-width:100%;padding:0;font:inherit;color:inherit;overflow-wrap:anywhere}
+.review-card p{margin:0 0 10px;font-size:13px;line-height:1.6;color:var(--muted);overflow-wrap:anywhere}
+.review-card small{display:block;font-size:12px;line-height:1.6;color:var(--muted)}
+.review-card blockquote{margin:12px 0;font-size:13px;overflow-wrap:anywhere}
+.review-card>.review-card-side{display:flex;flex-direction:column;align-items:flex-end;gap:12px;min-width:0}
+.review-card-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.review-card-actions .btn{min-height:42px;white-space:nowrap;font-size:13px;justify-content:center;gap:8px}
+.review-history-empty{margin:0;font-size:14px;line-height:1.7;color:var(--muted)}
+.review-decision-modal{max-width:520px}
+#review-decision-form{display:grid;gap:20px}
+#review-decision-form>.field{margin:0;gap:8px;font-size:13px}
+#review-decision-form :is(select,textarea){font-size:14px;line-height:1.6}
+#review-decision-form textarea{min-height:130px}
+#review-decision-form .form-error{margin:0;font-size:13px;line-height:1.6}
+#review-decision-form .form-error:empty{display:none}
+#review-decision-form .modal-footer{margin:4px 0 0;padding:0;border:0;display:block}
+#review-decision-form .modal-footer .btn{width:100%;min-height:46px;justify-content:center;text-align:center;font-size:14px}
+.profile-logout{justify-content:center;white-space:nowrap}
+@media(max-width:1100px){.review-card{grid-template-columns:minmax(0,1fr);gap:18px}.review-card>.review-card-side{align-items:flex-start}.review-card-actions{justify-content:flex-start}}
+@media(max-width:600px){.review-section{margin-top:24px}.review-section>.section-heading{margin-bottom:12px}.review-section .section-heading h2{font-size:16px;gap:8px}.review-card{padding:18px;gap:16px}.review-card h3{font-size:15px}.review-card-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:10px}.review-card-actions .btn{font-size:12px;white-space:normal;padding:10px 12px;min-height:44px}.review-card-actions .btn:only-child{grid-column:1/-1}.review-card>.review-card-side{width:100%;gap:12px}.review-history-empty{font-size:13px}.page-heading:has(.profile-logout){flex-wrap:wrap;gap:16px}.page-heading>.profile-logout{min-height:42px;font-size:12px;padding:10px 16px}#review-decision-form{gap:18px}.review-decision-modal .modal-header h2{font-size:18px}}
+
+#review-decision-form select{appearance:none;-webkit-appearance:none;padding-right:40px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a4bab0' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center}
