@@ -1,0 +1,1 @@
+Invoice exports: pdf-lib (MIT), @pdf-lib/fontkit (MIT), bundled pako (MIT/Zlib), Manrope fonts from Apollo assets. See pdf-lib.LICENSE and fontkit.NOTICE.

@@ -22,7 +22,7 @@ export async function handleAPI(request,env,user){try{
   if(!env.DB)return response({error:'База данных временно недоступна'},503);
   const url=new URL(request.url),path=url.pathname.replace(/^\/api\//,''),method=request.method,db=env.DB;
   if(!['GET','HEAD'].includes(method)){const origin=request.headers.get('origin');if(origin&&origin!==url.origin)throw fail('Запрос с другого сайта запрещён',403);}
-  if(['profile','company','media'].includes(path)){const result=await handleCompanyMedia(request,env,user,path);if(result)return result;}
+  if(['profile','company','company-billing','media'].includes(path)){const result=await handleCompanyMedia(request,env,user,path);if(result)return result;}
   if(path==='session'&&method==='GET')return response({user:{id:user.userId,name:user.displayName||user.email,email:user.email},workspaces:await userWorkspaces(db,user.userId)});
   if(path==='register'&&method==='POST'){const d=await body(request),name=str(100).min(1).parse(d.name?.trim()),agency=str(80).min(1).parse(d.agency?.trim()),role=str(120).min(1).parse(d.role?.trim());const existing=await userWorkspaces(db,user.userId);if(existing.some(w=>w.name===agency&&w.role==='owner'))return response({workspaceId:existing.find(w=>w.name===agency&&w.role==='owner').id});return response({workspaceId:await createWorkspace(db,{...user,displayName:name},agency,role)},201);}
   if(path==='bootstrap'&&method==='GET'){
